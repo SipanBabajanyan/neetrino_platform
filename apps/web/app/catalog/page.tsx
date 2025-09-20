@@ -64,6 +64,7 @@ export default function Catalog() {
   });
   const [currentPage, setCurrentPage] = useState(1);
   const [showFilters, setShowFilters] = useState(false);
+  const [isUsingFallback, setIsUsingFallback] = useState(false);
 
   // Функция для выполнения поиска
   const performSearch = useCallback(async (searchFilters: SearchFilters, page: number = 1) => {
@@ -86,23 +87,43 @@ export default function Catalog() {
       params.append('page', page.toString());
       params.append('limit', '20');
 
-      const response = await fetch(`http://localhost:3002/search?${params.toString()}`);
-      if (!response.ok) {
-        throw new Error('Failed to fetch search results');
-      }
+      // Try to fetch from API with timeout
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
       
-      const data: SearchResponse = await response.json();
-      setSearchData(data);
-      setCurrentPage(page);
+      try {
+        const response = await fetch(`http://localhost:3001/search?${params.toString()}`, {
+          signal: controller.signal,
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        });
+        
+        clearTimeout(timeoutId);
+        
+        if (!response.ok) {
+          throw new Error(`API returned ${response.status}: ${response.statusText}`);
+        }
+        
+        const data: SearchResponse = await response.json();
+        setSearchData(data);
+        setCurrentPage(page);
+        setIsUsingFallback(false);
+        return; // Success, exit early
+      } catch (fetchError) {
+        clearTimeout(timeoutId);
+        console.warn('API fetch failed, using fallback data:', fetchError);
+        throw fetchError; // Re-throw to trigger fallback
+      }
     } catch (error) {
-      console.error('Search error:', error);
+      console.warn('Search error, using fallback data:', error);
       // Fallback to mock data
       const fallbackDemos = [
         {
           id: '1',
           title: 'E-commerce Store',
-          description: 'Modern e-commerce platform with advanced features',
-          url: 'https://example-store.com',
+          description: 'Modern e-commerce platform with advanced features and AI-powered recommendations',
+          url: 'https://demo-store.neetrino.com',
           category: 'E-commerce',
           subcategory: 'Online Store',
           imageUrl: 'https://api.placeholder.com/400/300',
@@ -111,17 +132,17 @@ export default function Catalog() {
           isAccessible: true,
           vendor: {
             id: '1',
-            name: 'Shopify',
-            website: 'https://shopify.com',
-            logoUrl: 'https://cdn.shopify.com/s/files/1/0070/7032/files/shopify-logo.png',
+            name: 'Neetrino',
+            website: 'https://neetrino.com',
+            logoUrl: 'https://neetrino.com/logo.png',
           },
-          createdAt: new Date().toISOString(),
+          createdAt: new Date(Date.now() - 86400000).toISOString(), // 1 day ago
         },
         {
           id: '2',
           title: 'Portfolio Website',
-          description: 'Creative portfolio website with modern design',
-          url: 'https://example-portfolio.com',
+          description: 'Creative portfolio website with modern design and smooth animations',
+          url: 'https://demo-portfolio.neetrino.com',
           category: 'Portfolio',
           subcategory: 'Creative',
           imageUrl: 'https://api.placeholder.com/400/300',
@@ -130,17 +151,17 @@ export default function Catalog() {
           isAccessible: true,
           vendor: {
             id: '2',
-            name: 'Webflow',
-            website: 'https://webflow.com',
-            logoUrl: 'https://uploads-ssl.webflow.com/5d3e265ac8bcb6bc2f86b3c6/5d5595354c65721b5a0b8e0c_webflow-logo.png',
+            name: 'Neetrino',
+            website: 'https://neetrino.com',
+            logoUrl: 'https://neetrino.com/logo.png',
           },
-          createdAt: new Date().toISOString(),
+          createdAt: new Date(Date.now() - 172800000).toISOString(), // 2 days ago
         },
         {
           id: '3',
           title: 'Blog Platform',
-          description: 'Content management system for bloggers',
-          url: 'https://example-blog.com',
+          description: 'Content management system for bloggers with AI content suggestions',
+          url: 'https://demo-blog.neetrino.com',
           category: 'Blog',
           subcategory: 'CMS',
           imageUrl: 'https://api.placeholder.com/400/300',
@@ -149,11 +170,68 @@ export default function Catalog() {
           isAccessible: true,
           vendor: {
             id: '3',
-            name: 'WordPress',
-            website: 'https://wordpress.org',
-            logoUrl: 'https://s.w.org/images/wmark.png',
+            name: 'Neetrino',
+            website: 'https://neetrino.com',
+            logoUrl: 'https://neetrino.com/logo.png',
           },
-          createdAt: new Date().toISOString(),
+          createdAt: new Date(Date.now() - 259200000).toISOString(), // 3 days ago
+        },
+        {
+          id: '4',
+          title: 'AI Dashboard',
+          description: 'Real-time analytics dashboard with machine learning insights',
+          url: 'https://demo-ai.neetrino.com',
+          category: 'AI Solutions',
+          subcategory: 'Analytics',
+          imageUrl: 'https://api.placeholder.com/400/300',
+          screenshotUrl: 'https://api.placeholder.com/800/600',
+          viewCount: 312,
+          isAccessible: true,
+          vendor: {
+            id: '4',
+            name: 'Neetrino',
+            website: 'https://neetrino.com',
+            logoUrl: 'https://neetrino.com/logo.png',
+          },
+          createdAt: new Date(Date.now() - 345600000).toISOString(), // 4 days ago
+        },
+        {
+          id: '5',
+          title: 'Mobile Banking App',
+          description: 'Secure mobile banking application with biometric authentication',
+          url: 'https://demo-banking.neetrino.com',
+          category: 'Mobile Apps',
+          subcategory: 'Finance',
+          imageUrl: 'https://api.placeholder.com/400/300',
+          screenshotUrl: 'https://api.placeholder.com/800/600',
+          viewCount: 178,
+          isAccessible: true,
+          vendor: {
+            id: '5',
+            name: 'Neetrino',
+            website: 'https://neetrino.com',
+            logoUrl: 'https://neetrino.com/logo.png',
+          },
+          createdAt: new Date(Date.now() - 432000000).toISOString(), // 5 days ago
+        },
+        {
+          id: '6',
+          title: 'Learning Management System',
+          description: 'Online education platform with AI-powered course recommendations',
+          url: 'https://demo-lms.neetrino.com',
+          category: 'Education',
+          subcategory: 'E-Learning',
+          imageUrl: 'https://api.placeholder.com/400/300',
+          screenshotUrl: 'https://api.placeholder.com/800/600',
+          viewCount: 267,
+          isAccessible: true,
+          vendor: {
+            id: '6',
+            name: 'Neetrino',
+            website: 'https://neetrino.com',
+            logoUrl: 'https://neetrino.com/logo.png',
+          },
+          createdAt: new Date(Date.now() - 518400000).toISOString(), // 6 days ago
         },
       ];
 
@@ -202,22 +280,27 @@ export default function Catalog() {
         suggestions: [],
         filters: { 
           vendors: [
-            { id: '1', name: 'Shopify', count: 1 },
-            { id: '2', name: 'Webflow', count: 1 },
-            { id: '3', name: 'WordPress', count: 1 },
+            { id: '1', name: 'Neetrino', count: 6 },
           ], 
           categories: [
             { name: 'E-commerce', count: 1 },
             { name: 'Portfolio', count: 1 },
             { name: 'Blog', count: 1 },
+            { name: 'AI Solutions', count: 1 },
+            { name: 'Mobile Apps', count: 1 },
+            { name: 'Education', count: 1 },
           ], 
           subcategories: [
             { name: 'Online Store', count: 1 },
             { name: 'Creative', count: 1 },
             { name: 'CMS', count: 1 },
+            { name: 'Analytics', count: 1 },
+            { name: 'Finance', count: 1 },
+            { name: 'E-Learning', count: 1 },
           ] 
         }
       });
+      setIsUsingFallback(true);
     } finally {
       setLoading(false);
     }
@@ -286,8 +369,8 @@ export default function Catalog() {
       <Layout>
         <div className="container mx-auto px-4 py-8 pt-24">
           <div className="text-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
-            <p className="text-white/70 mt-4">Loading...</p>
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-a1 mx-auto"></div>
+            <p className="text-ink/70 mt-4">Loading...</p>
           </div>
         </div>
       </Layout>
@@ -299,8 +382,18 @@ export default function Catalog() {
       <div className="container mx-auto px-4 py-8 pt-24">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-white mb-2">Demo Catalog</h1>
-          <p className="text-white/70">Find the perfect design for your project</p>
+          <div className="glass p-6 rounded-3xl">
+            <h1 className="text-3xl font-bold text-ink mb-2">Demo Catalog</h1>
+            <p className="text-ink/70">Find the perfect design for your project</p>
+            {isUsingFallback && (
+              <div className="mt-4 p-3 glass-subtle rounded-2xl border border-a4/30">
+                <p className="text-sm text-ink/80">
+                  <span className="text-a4 font-medium">ℹ️ Demo Mode:</span> Showing sample projects. 
+                  API server is not available, but you can still explore our demo catalog.
+                </p>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Поиск и фильтры */}
@@ -308,29 +401,29 @@ export default function Catalog() {
           <div className="flex flex-col md:flex-row gap-4">
             {/* Поиск */}
             <div className="flex-1 relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/50" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-ink/50" />
               <input
                 type="text"
                 placeholder="Search by name or vendor..."
                 value={filters.q}
                 onChange={(e) => handleSearchChange(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 bg-white/5 border border-white/10 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-primary/50"
+                className="w-full pl-10 pr-4 py-2 glass-subtle rounded-full text-ink placeholder-ink/50 focus-ring"
               />
             </div>
             
             {/* Кнопка фильтров */}
             <button
               onClick={() => setShowFilters(!showFilters)}
-              className={`px-4 py-2 rounded-lg border transition-colors flex items-center gap-2 ${
+              className={`px-4 py-2 rounded-full transition-all duration-200 flex items-center gap-2 focus-ring ${
                 showFilters || filters.vendors.length > 0 || filters.categories.length > 0 || filters.subcategories.length > 0
-                  ? 'bg-primary/20 border-primary/50 text-primary'
-                  : 'bg-white/5 border-white/10 text-white hover:bg-white/10'
+                  ? 'glass-strong text-ink'
+                  : 'glass text-ink/70 hover:text-ink hover:glass-strong'
               }`}
             >
               <Filter className="w-4 h-4" />
               Filters
               {(filters.vendors.length + filters.categories.length + filters.subcategories.length) > 0 && (
-                <span className="bg-primary text-black text-xs px-2 py-1 rounded-full">
+                <span className="glass-strong text-ink text-xs px-2 py-1 rounded-full">
                   {filters.vendors.length + filters.categories.length + filters.subcategories.length}
                 </span>
               )}
@@ -339,35 +432,35 @@ export default function Catalog() {
 
           {/* Расширенные фильтры */}
           {showFilters && searchData && (
-            <div className="bg-white/5 border border-white/10 rounded-lg p-4 space-y-4">
+            <div className="glass p-4 rounded-3xl space-y-4">
               {/* Сортировка */}
               <div>
-                <label className="block text-white/70 text-sm mb-2">Sort by</label>
+                <label className="block text-ink/70 text-sm mb-2">Sort by</label>
                 <select
                   value={filters.sortBy}
                   onChange={(e) => handleSortChange(e.target.value as SearchFilters['sortBy'])}
-                  className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white focus:outline-none focus:border-primary/50"
+                  className="w-full px-3 py-2 glass-subtle rounded-full text-ink focus-ring"
                 >
-                  <option value="relevance" className="text-black">Relevance</option>
-                  <option value="createdAt" className="text-black">Date Created</option>
-                  <option value="viewCount" className="text-black">Most Popular</option>
-                  <option value="title" className="text-black">Title</option>
+                  <option value="relevance" className="text-ink">Relevance</option>
+                  <option value="createdAt" className="text-ink">Date Created</option>
+                  <option value="viewCount" className="text-ink">Most Popular</option>
+                  <option value="title" className="text-ink">Title</option>
                 </select>
               </div>
 
               {/* Вендоры */}
               {searchData.filters.vendors.length > 0 && (
                 <div>
-                  <label className="block text-white/70 text-sm mb-2">Vendors</label>
+                  <label className="block text-ink/70 text-sm mb-2">Vendors</label>
                   <div className="flex flex-wrap gap-2">
                     {searchData.filters.vendors.map(vendor => (
                       <button
                         key={vendor.id}
                         onClick={() => handleVendorFilter(vendor.id)}
-                        className={`px-3 py-1 rounded-full text-sm transition-colors ${
+                        className={`px-3 py-1 rounded-full text-sm transition-all duration-200 focus-ring ${
                           filters.vendors.includes(vendor.id)
-                            ? 'bg-primary text-black'
-                            : 'bg-white/10 text-white hover:bg-white/20'
+                            ? 'glass-strong text-ink'
+                            : 'glass text-ink/70 hover:text-ink hover:glass-strong'
                         }`}
                       >
                         {vendor.name} ({vendor.count})
@@ -380,16 +473,16 @@ export default function Catalog() {
               {/* Категории */}
               {searchData.filters.categories.length > 0 && (
                 <div>
-                  <label className="block text-white/70 text-sm mb-2">Categories</label>
+                  <label className="block text-ink/70 text-sm mb-2">Categories</label>
                   <div className="flex flex-wrap gap-2">
                     {searchData.filters.categories.map(category => (
                       <button
                         key={category.name}
                         onClick={() => handleCategoryFilter(category.name)}
-                        className={`px-3 py-1 rounded-full text-sm transition-colors ${
+                        className={`px-3 py-1 rounded-full text-sm transition-all duration-200 focus-ring ${
                           filters.categories.includes(category.name)
-                            ? 'bg-primary text-black'
-                            : 'bg-white/10 text-white hover:bg-white/20'
+                            ? 'glass-strong text-ink'
+                            : 'glass text-ink/70 hover:text-ink hover:glass-strong'
                         }`}
                       >
                         {category.name} ({category.count})
@@ -402,16 +495,16 @@ export default function Catalog() {
               {/* Подкатегории */}
               {searchData.filters.subcategories.length > 0 && (
                 <div>
-                  <label className="block text-white/70 text-sm mb-2">Subcategories</label>
+                  <label className="block text-ink/70 text-sm mb-2">Subcategories</label>
                   <div className="flex flex-wrap gap-2">
                     {searchData.filters.subcategories.map(subcategory => (
                       <button
                         key={subcategory.name}
                         onClick={() => handleSubcategoryFilter(subcategory.name)}
-                        className={`px-3 py-1 rounded-full text-sm transition-colors ${
+                        className={`px-3 py-1 rounded-full text-sm transition-all duration-200 focus-ring ${
                           filters.subcategories.includes(subcategory.name)
-                            ? 'bg-primary text-black'
-                            : 'bg-white/10 text-white hover:bg-white/20'
+                            ? 'glass-strong text-ink'
+                            : 'glass text-ink/70 hover:text-ink hover:glass-strong'
                         }`}
                       >
                         {subcategory.name} ({subcategory.count})
@@ -425,7 +518,7 @@ export default function Catalog() {
               <div className="flex justify-end">
                 <button
                   onClick={clearFilters}
-                  className="px-4 py-2 text-white/70 hover:text-white transition-colors"
+                  className="px-4 py-2 text-ink/70 hover:text-ink transition-colors focus-ring rounded-lg"
                 >
                   Clear all filters
                 </button>
@@ -437,9 +530,9 @@ export default function Catalog() {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               {loading ? (
-                <span className="text-white/70 text-sm">Searching...</span>
+                <span className="text-ink/70 text-sm">Searching...</span>
               ) : (
-                <span className="text-white/70 text-sm">
+                <span className="text-ink/70 text-sm">
                   Found: {searchData?.total || 0} demos
                 </span>
               )}
@@ -448,20 +541,20 @@ export default function Catalog() {
             <div className="flex items-center gap-2">
               <button
                 onClick={() => setViewMode('grid')}
-                className={`p-2 rounded-lg transition-colors ${
+                className={`p-2 rounded-full transition-all duration-200 focus-ring ${
                   viewMode === 'grid' 
-                    ? 'bg-primary/20 text-primary' 
-                    : 'text-white/50 hover:text-white'
+                    ? 'glass-strong text-ink' 
+                    : 'glass text-ink/50 hover:text-ink hover:glass-strong'
                 }`}
               >
                 <Grid className="w-4 h-4" />
               </button>
               <button
                 onClick={() => setViewMode('list')}
-                className={`p-2 rounded-lg transition-colors ${
+                className={`p-2 rounded-full transition-all duration-200 focus-ring ${
                   viewMode === 'list' 
-                    ? 'bg-primary/20 text-primary' 
-                    : 'text-white/50 hover:text-white'
+                    ? 'glass-strong text-ink' 
+                    : 'glass text-ink/50 hover:text-ink hover:glass-strong'
                 }`}
               >
                 <List className="w-4 h-4" />
@@ -473,7 +566,7 @@ export default function Catalog() {
         {/* Результаты поиска */}
         {loading ? (
           <div className="flex justify-center items-center py-12">
-            <div className="text-white/70">Loading demos...</div>
+            <div className="text-ink/70">Loading demos...</div>
           </div>
         ) : searchData && searchData.data.length > 0 ? (
           <>
@@ -486,12 +579,12 @@ export default function Catalog() {
               {searchData.data.map((demo) => (
                 <div
                   key={demo.id}
-                  className={`bg-white/5 border border-white/10 rounded-lg overflow-hidden hover:border-primary/30 transition-colors ${
+                  className={`glass rounded-3xl overflow-hidden hover:glass-strong transition-all duration-200 focus-ring ${
                     viewMode === 'list' ? 'flex' : ''
                   }`}
                 >
                   {/* Изображение */}
-                  <div className={`bg-white/5 ${
+                  <div className={`bg-a1/10 ${
                     viewMode === 'list' ? 'w-48 h-32 flex-shrink-0' : 'h-48'
                   }`}>
                     {demo.screenshotUrl ? (
@@ -501,8 +594,8 @@ export default function Catalog() {
                         className="w-full h-full object-cover"
                       />
                     ) : (
-                      <div className="w-full h-full bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center">
-                        <span className="text-white/50 text-sm">Preview</span>
+                      <div className="w-full h-full bg-a1/10 flex items-center justify-center">
+                        <span className="text-ink/50 text-sm">Preview</span>
                       </div>
                     )}
                   </div>
@@ -510,39 +603,43 @@ export default function Catalog() {
                   {/* Контент */}
                   <div className={`p-4 ${viewMode === 'list' ? 'flex-1' : ''}`}>
                     <div className="flex items-start justify-between mb-2">
-                      <h3 className="text-white font-semibold">{demo.title}</h3>
+                      <h3 className="text-ink font-semibold">{demo.title}</h3>
                       <div className="flex items-center gap-2">
-                        <span className="flex items-center gap-1 text-white/60 text-xs">
+                        <span className="flex items-center gap-1 text-ink/60 text-xs">
                           <Eye className="w-3 h-3" />
                           {demo.viewCount}
                         </span>
                         <span className={`px-2 py-1 text-xs rounded-full ${
                           demo.isAccessible 
-                            ? 'bg-green-500/20 text-green-400' 
-                            : 'bg-red-500/20 text-red-400'
+                            ? 'glass-subtle text-green-600' 
+                            : 'glass-subtle text-red-600'
                         }`}>
                           {demo.isAccessible ? 'Live' : 'Offline'}
                         </span>
                       </div>
                     </div>
                     
-                    <div className="text-white/60 text-sm mb-3">
+                    <div className="text-ink/60 text-sm mb-3">
                       <div>Vendor: {demo.vendor.name}</div>
                       <div>Category: {demo.category}</div>
                       {demo.subcategory && <div>Subcategory: {demo.subcategory}</div>}
                     </div>
                     
                     <div className="flex gap-2">
-                      <button className="flex-1 px-3 py-2 bg-primary text-black rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors">
+                      <button 
+                        onClick={() => window.open(demo.url, '_blank')}
+                        className="flex-1 px-3 py-2 glass-strong text-ink rounded-full text-sm font-medium hover:glass transition-all duration-200 focus-ring group flex items-center justify-center gap-1"
+                      >
+                        <Eye className="w-3 h-3" />
                         View
                       </button>
                       <a
                         href={demo.url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="px-3 py-2 border border-white/20 text-white rounded-lg text-sm hover:bg-white/5 transition-colors flex items-center gap-1"
+                        className="px-3 py-2 glass text-ink rounded-full text-sm hover:glass-strong transition-all duration-200 focus-ring flex items-center gap-1 group"
                       >
-                        <ExternalLink className="w-3 h-3" />
+                        <ExternalLink className="w-3 h-3 group-hover:scale-110 transition-transform duration-200" />
                         Open
                       </a>
                     </div>
@@ -558,7 +655,7 @@ export default function Catalog() {
                   <button
                     onClick={() => handlePageChange(currentPage - 1)}
                     disabled={currentPage === 1}
-                    className="px-3 py-2 text-white/50 hover:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="px-3 py-2 text-ink/50 hover:text-ink transition-colors disabled:opacity-50 disabled:cursor-not-allowed focus-ring rounded-lg"
                   >
                     Previous
                   </button>
@@ -569,10 +666,10 @@ export default function Catalog() {
                       <button
                         key={page}
                         onClick={() => handlePageChange(page)}
-                        className={`px-3 py-2 rounded-lg transition-colors ${
+                        className={`px-3 py-2 rounded-full transition-all duration-200 focus-ring ${
                           currentPage === page
-                            ? 'bg-primary text-black'
-                            : 'text-white/50 hover:text-white'
+                            ? 'glass-strong text-ink'
+                            : 'glass text-ink/50 hover:text-ink hover:glass-strong'
                         }`}
                       >
                         {page}
@@ -583,7 +680,7 @@ export default function Catalog() {
                   <button
                     onClick={() => handlePageChange(currentPage + 1)}
                     disabled={currentPage === searchData.totalPages}
-                    className="px-3 py-2 text-white/50 hover:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="px-3 py-2 text-ink/50 hover:text-ink transition-colors disabled:opacity-50 disabled:cursor-not-allowed focus-ring rounded-lg"
                   >
                     Next
                   </button>
@@ -593,10 +690,10 @@ export default function Catalog() {
           </>
         ) : (
           <div className="text-center py-12">
-            <div className="text-white/70 mb-4">No demos found</div>
+            <div className="text-ink/70 mb-4">No demos found</div>
             <button
               onClick={clearFilters}
-              className="px-4 py-2 bg-primary text-black rounded-lg hover:bg-primary/90 transition-colors"
+              className="px-4 py-2 glass-strong text-ink rounded-full hover:glass transition-all duration-200 focus-ring"
             >
               Clear filters
             </button>
